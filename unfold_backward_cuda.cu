@@ -8,7 +8,7 @@ using namespace at;
 template <typename scalar_t>
 __global__ void unfold_backward_cuda_kernel(
     const scalar_t* __restrict__ grad,
-    const IntArrayRef __restrict__ input_sizes,
+    const int64_t* __restrict__ input_sizes,
     const int64_t dim,
     const int64_t size,
     const int64_t step
@@ -24,7 +24,7 @@ Tensor unfold_backward_cuda(
   const dim3 blocks(2);
 
   AT_DISPATCH_FLOATING_TYPES(grad.type(), "unfold_backward_cuda", ([&] {
-    lltm_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(
+    unfold_backward_cuda_kernel<scalar_t><<<blocks, threads>>>(
         grad.data<scalar_t>(),
         input_sizes,
         dim,
