@@ -1,6 +1,7 @@
 import torch
 import unfold
 import numpy as np
+import time
 
 class UnfoldFunction(torch.autograd.Function):
     @staticmethod
@@ -43,11 +44,11 @@ def test():
 def main():
     # Mine
     dim = 0
-    size = 5
-    step = 3
-    nelemts = 13
+    size = 3
+    step = 1
+    nelemts = 5*3
 
-    a = torch.arange(1, nelemts+1).float()
+    a = torch.arange(1, nelemts+1).float().view(5, 3)
     print("INPUT:")
     print(a)
     print("OUTPUT:")
@@ -60,7 +61,7 @@ def main():
     print("mine", a.grad)
     
     # Real 
-    b = torch.arange(1,nelemts+1).float()
+    b = torch.arange(1,nelemts+1).float().view(5, 3)
     b.requires_grad_()
     ret = b.unfold(dim, size, step)
 
@@ -69,5 +70,34 @@ def main():
     
     assert torch.allclose(b.grad, a.grad)
 
+def bench():
+
+    nelem = 1e7
+    dim = 0
+    size = 3
+    step = 1
+
+    a = torch.arange(nelem).float()
+    print(a.unfold(dim,size,step))
+    a.requires_grad_()
+    ret = UnfoldFunction.apply(a, dim, size, step)
+
+    start = time.time()
+    (ret).sum().backward()
+    end = time.time()
+    print("Took", end-start)
+
+    # Real 
+    b = torch.arange(nelem).float()
+    b.requires_grad_()
+    ret = b.unfold(dim, size, step)
+    start = time.time()
+    (ret).sum().backward()
+    
+    end = time.time()
+    print("Took", end-start)
+    
+    assert torch.allclose(b.grad, a.grad)
+
 if __name__ == '__main__':
-    test()
+    bench()

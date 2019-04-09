@@ -1,6 +1,6 @@
 #include <torch/extension.h>
 #include <iostream>
-
+#include <vector>
 
 using namespace at;
 using namespace std;
@@ -21,13 +21,19 @@ Tensor unfold_backward_real(const Tensor & grad, IntArrayRef input_sizes, int64_
 }
 
 // New version
-Tensor unfold_backward(const Tensor & grad, IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step) {
+Tensor unfold_backward_cpu(const Tensor & grad, IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step) {
 
     int64_t numel = 1;
     for (auto size : input_sizes) {
         numel *= size;
     }
-    
+    /*
+    int64_t before = 1;
+    for (int i = 0; i < dim; i++) before *= input_sizes[i];
+    int64_t after = 1;
+    for (int i = dim+1; i < input_sizes.size(); i++) after *= input_sizes[i];
+    */
+
     auto grad_view = grad.view(-1);
     auto grad_accessor = grad_view.accessor<float, 1>();
     
@@ -71,7 +77,24 @@ Tensor unfold_backward(const Tensor & grad, IntArrayRef input_sizes, int64_t dim
     return grad_input.view(input_sizes);
 }
 
+at::Tensor unfold_backward_cuda(
+    const Tensor & grad, IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step
+);
+
+#define CHECK_CUDA(x) AT_ASSERTM(x.type().is_cuda(), #x " must be a CUDA tensor")
+#define CHECK_CONTIGUOUS(x) AT_ASSERTM(x.is_contiguous(), #x " must be contiguous")
+#define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
+
+Tensor unfold_backward(
+    const Tensor & grad, IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step
+) {
+
+  CHECK_INPUT(grad);
+  return unfold_backward_cuda(grad, input_sizes, dim, size, step);
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("real_backward", &unfold_backward_real, "unfold real backward");
-  m.def("backward", &unfold_backward, "unfold backward");
+  m.def("backward", &unfold_backward, "unfold backward (CUDA)");
+  m.def("backward_cpu", &unfold_backward_cpu, "unfold backward (CPU)");
 }
