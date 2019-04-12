@@ -48,22 +48,18 @@ Tensor unfold_backward_cuda(
     const Tensor & grad, IntArrayRef input_sizes, int64_t dim, int64_t size, int64_t step
 ) {
 
-  int64_t input_sizes = 1;
-  for (auto size : input_sizes) {
-      input_sizes *= size;
-  }
+  int64_t input_elements = input_sizes[0];
   auto result = at::zeros(input_sizes, grad.options());
 
   const int threads = 1024;
-  const dim3 blocks((input_sizes / threads) + 1);
+  const dim3 blocks((input_elements / threads) + 1);
   
   AT_DISPATCH_FLOATING_TYPES(grad.type(), "unfold_backward_cuda", ([&] {
     unfold_backward_cuda_kernel<scalar_t><<<blocks, threads>>>(
         grad.data<scalar_t>(),
         result.data<scalar_t>(),
         grad.size(0),
-        result.size(0),
-        dim,
+        input_elements,
         size,
         step
         );
