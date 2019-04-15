@@ -42,29 +42,29 @@ Tensor unfold_backward_cpu(const Tensor & grad, IntArrayRef input_sizes, int64_t
     
     int n_rows = grad.size(0);
     int n_cols = grad.size(1);
-
-    int inc = 0;
-    int col_inc = size - step;
+    const int next_col = (size - step);
 
     for (int i = 0; i < numel; i++) {
         
         // Used to determine where, in the result, the element at index i
         // maps to for the first time
-        int start_row = 0;
+        int row = 0;
         int start_col = i;
-
+        
         if (i >= size) {
-            if ((i-size) % step == 0) inc++;
+            row = (i - size) / step + 1;
 
-            start_row = inc;
-            start_col = col_inc;
+            if (i % size == 0) {
+                start_col = size - step;
+            } else {
+                start_col = i % size;
 
-            col_inc++;
-            if (col_inc >= size) col_inc = size - step;
+            }
         }
+        
+        cout << "at i: " << i << " start_col " << start_col << endl;
 
         // Iterates over the positions of element i in the result
-        int row = start_row;
         for (int col = start_col; col >= 0; col-=step) {
             if (row >= n_rows) break;
 

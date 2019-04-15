@@ -14,7 +14,7 @@ __global__ void unfold_backward_cuda_kernel(
     const int64_t size,
     const int64_t step
 ) {
-
+    /*
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= result_size) return;
 
@@ -42,6 +42,7 @@ __global__ void unfold_backward_cuda_kernel(
         result[i] += grad[output_index];
         row++;   
     }
+    */
   }
 
 Tensor unfold_backward_cuda(

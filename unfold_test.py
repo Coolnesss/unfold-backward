@@ -15,13 +15,13 @@ class UnfoldFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_input):
         input_sizes, dim, size, step = ctx.input_sizes, ctx.dim, ctx.size, ctx.step
-        return unfold.backward(grad_input, input_sizes, dim, size, step), None, None, None
+        return unfold.backward_cpu(grad_input, input_sizes, dim, size, step), None, None, None
 
 
 def test():
     dim=0
     for step in range(1,10):
-        for size in range(10):
+        for size in range(1, 10):
             for nelemts in [10,13,21,53,95]:
 
                 a = torch.arange(1, nelemts+1).float()
@@ -39,16 +39,23 @@ def test():
 
                 (ret).sum().backward()
                 
-                assert torch.allclose(b.grad, a.grad)
+                res = torch.allclose(b.grad, a.grad)
+
+                if not res:
+                    print(f"Failed! With step {step} size {size} nelemts {nelemts}" )
+                    print("TRUE:", b.grad)
+                    print("MINE:", a.grad)
+                    return
+    print("done test")
 
 def main():
     # Mine
     dim = 0
     size = 3
-    step = 1
-    nelemts = 5*3
+    step = 2
+    nelemts = 9
 
-    a = torch.arange(1, nelemts+1).float().view(5, 3)
+    a = torch.arange(1, nelemts+1).float()
     print("INPUT:")
     print(a)
     print("OUTPUT:")
@@ -61,7 +68,7 @@ def main():
     print("mine", a.grad)
     
     # Real 
-    b = torch.arange(1,nelemts+1).float().view(5, 3)
+    b = torch.arange(1,nelemts+1).float()
     b.requires_grad_()
     ret = b.unfold(dim, size, step)
 
@@ -100,4 +107,4 @@ def bench():
     assert torch.allclose(b.grad, a.grad)
 
 if __name__ == '__main__':
-    bench()
+    test()
