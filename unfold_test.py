@@ -16,6 +16,8 @@ class UnfoldFunction(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_input):
         input_sizes, dim, size, step = ctx.input_sizes, ctx.dim, ctx.size, ctx.step
+        if grad_input.is_cuda:
+            return unfold.backward(grad_input.contiguous(), input_sizes, dim, size, step), None, None, None
         return unfold.backward_cpu(grad_input, input_sizes, dim, size, step), None, None, None
 
 
@@ -63,7 +65,7 @@ def main():
     step = 2
     nelemts = 9
 
-    a = torch.arange(1, nelemts+1).float()
+    a = torch.arange(1, nelemts+1).float().cuda()
     print("INPUT:")
     print(a)
     print("OUTPUT:")
@@ -76,7 +78,7 @@ def main():
     print("mine", a.grad)
     
     # Real 
-    b = torch.arange(1,nelemts+1).float()
+    b = torch.arange(1,nelemts+1).float().cuda()
     b.requires_grad_()
     ret = b.unfold(dim, size, step)
 
@@ -86,33 +88,38 @@ def main():
     assert torch.allclose(b.grad, a.grad)
 
 def bench():
-
-    nelem = 1e7
+    nelem = 1e5
     dim = 0
-    size = 3
-    step = 1
+    size = 10000
+    step = 39
 
-    a = torch.arange(nelem).float()
-    print(a.unfold(dim,size,step))
-    a.requires_grad_()
-    ret = UnfoldFunction.apply(a, dim, size, step)
+    def new():
+        a = torch.arange(nelem).float().cuda()
+        a.requires_grad_()
+        ret = UnfoldFunction.apply(a, dim, size, step)
 
-    start = time.time()
-    (ret).sum().backward()
-    end = time.time()
-    print("Took", end-start)
+        start = time.time()
+        (ret).sum().backward()
+        torch.cuda.synchronize()
+        print(torch.cuda.max_memory_allocated() / 1e+9, "gb")
+        end = time.time()
+        print("New took", end-start)
 
-    # Real 
-    b = torch.arange(nelem).float()
-    b.requires_grad_()
-    ret = b.unfold(dim, size, step)
-    start = time.time()
-    (ret).sum().backward()
-    
-    end = time.time()
-    print("Took", end-start)
-    
-    assert torch.allclose(b.grad, a.grad)
+    new()    
+    torch.cuda.synchronize()
+    def old():
+
+        b = torch.arange(nelem).float().cuda()
+        b.requires_grad_()
+        ret = b.unfold(dim, size, step)
+        
+        start = time.time()
+        (ret).sum().backward()
+        torch.cuda.synchronize()
+        print(torch.cuda.max_memory_allocated() / 1e+9, "gb")
+        end = time.time()
+        print("Old took", end-start)
+    old()
 
 if __name__ == '__main__':
-    test()
+    bench()

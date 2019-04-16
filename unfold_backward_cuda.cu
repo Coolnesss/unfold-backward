@@ -9,32 +9,27 @@ template <typename scalar_t>
 __global__ void unfold_backward_cuda_kernel(
     const scalar_t* __restrict__ grad,
     scalar_t* __restrict__ result,
-    const int64_t grad_size,
     const int64_t result_size,
+    const int64_t n_rows,
+    const int64_t n_cols,
     const int64_t size,
     const int64_t step
 ) {
-    /*
+    
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= result_size) return;
 
-    // Used to determine where, in the result, the element at index i
-    // maps to for the first time
-    int start_row = 0;
+    int row = 0;
     int start_col = i;
+    int col_inc = size - step;
 
     if (i >= size) {
-        if ((i-size) % step == 0) inc++;
-
-        start_row = inc;
+        row = (i - size) / step + 1;    
+        col_inc = size - step + (i - size) % step;
         start_col = col_inc;
-
-        col_inc++;
-        if (col_inc >= size) col_inc = size - step;
     }
-
+    
     // Iterates over the positions of element i in the result
-    int row = start_row;
     for (int col = start_col; col >= 0; col-=step) {
         if (row >= n_rows) break;
 
@@ -42,7 +37,6 @@ __global__ void unfold_backward_cuda_kernel(
         result[i] += grad[output_index];
         row++;   
     }
-    */
   }
 
 Tensor unfold_backward_cuda(
@@ -59,8 +53,9 @@ Tensor unfold_backward_cuda(
     unfold_backward_cuda_kernel<scalar_t><<<blocks, threads>>>(
         grad.data<scalar_t>(),
         result.data<scalar_t>(),
-        grad.size(0),
         input_elements,
+        grad.size(0),
+        grad.size(1),
         size,
         step
         );
