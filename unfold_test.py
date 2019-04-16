@@ -2,6 +2,7 @@ import torch
 import unfold
 import numpy as np
 import time
+from random import shuffle
 
 class UnfoldFunction(torch.autograd.Function):
     @staticmethod
@@ -20,10 +21,15 @@ class UnfoldFunction(torch.autograd.Function):
 
 def test():
     dim=0
-    for step in range(1,10):
-        for size in range(1, 10):
-            for nelemts in [10,13,21,53,95]:
-                
+    steps = list(range(1,10))
+    sizes = list(range(1, 10))
+    input_sizes = [10,13,21,53,95]
+    f = lambda x: [shuffle(a) for a in x]
+    f([steps, sizes, input_sizes])
+
+    for step in steps:
+        for size in sizes:
+            for nelemts in input_sizes:
                 a = torch.arange(1, nelemts+1).float()
                 a.unfold(dim,size,step) # arguments are legal
                 a.requires_grad_()
