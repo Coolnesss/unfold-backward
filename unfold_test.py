@@ -23,21 +23,21 @@ def test():
     for step in range(1,10):
         for size in range(1, 10):
             for nelemts in [10,13,21,53,95]:
-
+                
                 a = torch.arange(1, nelemts+1).float()
-                a.unfold(dim,size,step)
+                a.unfold(dim,size,step) # arguments are legal
                 a.requires_grad_()
                 
                 ret = UnfoldFunction.apply(a, dim, size, step)
 
-                (ret).sum().backward()
+                ret.sum().backward()
                 
                 # Real 
                 b = torch.arange(1,nelemts+1).float()
                 b.requires_grad_()
                 ret = b.unfold(dim, size, step)
 
-                (ret).sum().backward()
+                ret.sum().backward()
                 
                 res = torch.allclose(b.grad, a.grad)
 
@@ -45,6 +45,8 @@ def test():
                     print(f"Failed! With step {step} size {size} nelemts {nelemts}" )
                     print("TRUE:", b.grad)
                     print("MINE:", a.grad)
+                    print("IN:", a)
+                    print("OUT:", ret)
                     return
     print("done test")
 
