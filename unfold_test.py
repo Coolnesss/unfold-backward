@@ -58,40 +58,42 @@ def test():
                     return
     print("done test")
 
-def main():
-    # Mine
+def bench_old():
+    nelem = 1e5
     dim = 0
-    size = 3
-    step = 2
-    nelemts = 9
-
-    a = torch.arange(1, nelemts+1).float().cuda()
-    print("INPUT:")
-    print(a)
-    print("OUTPUT:")
-    print(a.unfold(dim,size,step))
-    a.requires_grad_()
+    size = 10004
+    step = 3
     
+    a = torch.arange(nelem).float().cuda()
+    a.requires_grad_()
+    ret = a.unfold(dim, size, step)
+
+    (ret).sum().backward()
+
+    torch.cuda.synchronize()
+    print(torch.cuda.max_memory_allocated() / 1e+9, "gb")
+
+def bench_new():
+    nelem = 1e5
+    dim = 0
+    size = 10004
+    step = 3
+
+    a = torch.arange(nelem).float().cuda()
+    a.requires_grad_()
     ret = UnfoldFunction.apply(a, dim, size, step)
 
     (ret).sum().backward()
-    print("mine", a.grad)
-    
-    # Real 
-    b = torch.arange(1,nelemts+1).float().cuda()
-    b.requires_grad_()
-    ret = b.unfold(dim, size, step)
 
-    (ret).sum().backward()
-    print("real",b.grad)
+    torch.cuda.synchronize()
+    print(torch.cuda.max_memory_allocated() / 1e+9, "gb")
     
-    assert torch.allclose(b.grad, a.grad)
 
 def bench():
     nelem = 1e5
     dim = 0
-    size = 10000
-    step = 39
+    size = 304
+    step = 13
 
     def new():
         a = torch.arange(nelem).float().cuda()
@@ -107,6 +109,7 @@ def bench():
 
     new()    
     torch.cuda.synchronize()
+    print("Memory allocated in between", torch.cuda.memory_allocated())
     def old():
 
         b = torch.arange(nelem).float().cuda()
